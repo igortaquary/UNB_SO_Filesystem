@@ -49,11 +49,8 @@ function chainedCreate(disk: DiskFile[], operation: FileOperation) {
   const total_size = operation.size + Math.ceil(operation.size / 10);
   for (let block = 0; block < total_size; block++) {
     const freeIndex = disk.findIndex( b => b.name === "0");
-    const nextFreeIndex = block >= total_size ? 
+    const nextFreeIndex = block >= total_size - 1 ? 
       undefined : disk.findIndex( (b,i) => (b.name === "0" && i > freeIndex ))
-    
-    if(nextFreeIndex === -1)
-      throw new Error("Falta de espaço em disco");
     
     disk[freeIndex] = {
       name: operation.name,
@@ -117,7 +114,7 @@ function getFreeDiskSpaces(disk: DiskFile[]) {
 export function deleteFile(disk: DiskFile[], process: Process, operation: FileOperation) {
   
   const fileFirstIndex = disk.findIndex( file => file.name[0] === operation.name )
-  if(fileFirstIndex === -1) throw new Error("O arquivo não foi encontrado para deleção");
+  if(fileFirstIndex === -1) throw new Error(`O arquivo ${operation.name} não foi encontrado para deleção`);
   const fileFirstBlock = disk[fileFirstIndex]
 
   // Verifica permissão para deletar arquivo
