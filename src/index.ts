@@ -38,7 +38,7 @@ function runOperations(disk: DiskFile[], processes: Process[], allocationType: n
       // Busca processo que realizará operação
       const processIndex = processes.findIndex( p => p.id === operation.process_id)
       // Verifica se o processo existe na lista de processos
-      if(processIndex === -1) 
+      if(processIndex === -1)
         throw new Error(`O processo ${operation.process_id} não existe.`);
       // Verifica se o processo ainda pode executar operações
       if(processes[processIndex].process_time <= 0) 
@@ -104,7 +104,6 @@ function readProcesses(filename: string) {
       operations: 0
     }
   })
-  console.log(processes)
   return processes;
 }
 
@@ -123,7 +122,6 @@ function readFiles(filename: string) {
       size: Number(size)
     }
   })
-  console.log(oldFiles)
 
   const filesToCreate: FileOperation[] = contentArr.slice(oldFilesQty + 3).map( line => {
     let [process_id, type, name, size] = line.split(",");
@@ -134,7 +132,6 @@ function readFiles(filename: string) {
       size: Number(size) || null
     }
   })
-  console.log(filesToCreate)
   const response = {
     allocationType,
     diskSize,

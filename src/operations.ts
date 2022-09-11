@@ -1,6 +1,7 @@
 import { AllocationType, DiskFile, FileOperation, Process } from "./typings";
 import { findObjectValueGte, sumObjectValues } from "./utils";
 
+/* OPERAÇÕES DE CRIAÇÃO */
 export function createFile(disk: DiskFile[], allocationType: AllocationType, process: Process, operation: FileOperation) {
   // Obtem os espaços livres no disco
   const freeDiskSpaces = getFreeDiskSpaces(disk)
@@ -10,21 +11,21 @@ export function createFile(disk: DiskFile[], allocationType: AllocationType, pro
       const availableIndex = findObjectValueGte( freeDiskSpaces, operation.size )
       if(availableIndex === undefined)
         throw new Error("Falta de espaço em disco para alocação contigua.");
-      return contiguousCreate(disk, operation, availableIndex)
+      return contiguousCreate(disk, operation, availableIndex);
 
-    case AllocationType.ENCADEADA: 
+    case AllocationType.ENCADEADA:
       // Verifica se tem espaço total disponivel
       if( operation.size > sumObjectValues( freeDiskSpaces ) ) 
         throw new Error("Falta de espaço em disco");
 
-      return chainedCreate(disk, operation)
+      return chainedCreate(disk, operation);
 
     case AllocationType.INDEXADA:
       // Verifica se tem espaço disponivel
-      if( operation.size > sumObjectValues( freeDiskSpaces ) ) 
+      if( operation.size > sumObjectValues( freeDiskSpaces ) )
         throw new Error("Falta de espaço em disco");
 
-      return indexedCreate(disk, operation)
+      return indexedCreate(disk, operation);
   
     default:
       throw new Error("Tipo de alocação do arquivo não conhecida");
@@ -65,7 +66,30 @@ function chainedCreate(disk: DiskFile[], operation: FileOperation) {
 }
 
 function indexedCreate(disk: DiskFile[], operation: FileOperation) {
-  // !!! IMPLEMENTAR LOGICA CRIAÇÃO INDEXADA
+  // Busca primeiro bloco livre
+  const firstBlockIndex = disk.findIndex( b => b.name === "0");
+  // Cria bloco de indice
+  disk[firstBlockIndex] = {
+    name: operation.name + "I",
+    allocationType: AllocationType.INDEXADA,
+    created_by: operation.process_id,
+    blocksList: []
+  }
+
+  const blocksList = []
+  // Cria blocos de dados
+  for (let i = 0; i < operation.size; i++) {
+    const freeIndex = disk.findIndex( b => b.name === "0");
+    disk[freeIndex] = {
+      name: operation.name,
+      created_by: operation.process_id,
+      allocationType: AllocationType.INDEXADA,
+    }
+    blocksList.push(freeIndex)
+  }
+
+  // Salva endereços dos blocos de dados no bloco de indice
+  disk[firstBlockIndex].blocksList = blocksList
   return disk
 }
 
@@ -106,10 +130,10 @@ export function deleteFile(disk: DiskFile[], process: Process, operation: FileOp
       return contiguousDelete(disk, fileFirstIndex, operation.name);
 
     case AllocationType.ENCADEADA:
-      return chainedDelete(disk, fileFirstIndex, operation.name);
+      return chainedDelete(disk, fileFirstIndex);
 
     case AllocationType.INDEXADA:
-      return indexedDelete(disk, fileFirstIndex, operation.name);
+      return indexedDelete(disk, fileFirstIndex);
 
     default:
       throw new Error("Tipo de alocação do arquivo não conhecida");
@@ -123,12 +147,31 @@ function contiguousDelete(disk: DiskFile[], firstIndex: number, filename: string
   return disk
 }
 
-function chainedDelete(disk: DiskFile[], firstIndex: number, filename: string) {
-  // !!! IMPLEMENTAR LOGICA DELEÇÃO ENCADEADA
+function chainedDelete(disk: DiskFile[], firstIndex: number) {
+  let i = firstIndex
+  while (i !== undefined) {
+    const aux_i = i
+    i = disk[i].nextBlock
+    disk[aux_i] = { name: "0" }
+  }
   return disk
 }
 
-function indexedDelete(disk: DiskFile[], firstIndex: number, filename: string) {
-  // !!! IMPLEMENTAR LOGICA DELEÇÃO INDEXADA
+function indexedDelete(disk: DiskFile[], firstIndex: number) {
+  const index_block = disk[firstIndex]
+  if(index_block.name.charAt(1) !== "I")
+    throw new Error("Não é um bloco de indice");
+
+  if(!index_block.blocksList)
+    throw new Error("Bloco de indice não possui lista de blocos");
+  
+  // Apagar blocos de dados
+  index_block.blocksList.forEach((block) => {
+    disk[block] = { name: "0" }
+  })
+
+  // Apagar bloco de indice
+  disk[firstIndex] = { name: "0" }
+  
   return disk
 }
