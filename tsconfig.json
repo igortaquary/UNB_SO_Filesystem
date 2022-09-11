@@ -1,0 +1,13 @@
+{
+  "compilerOptions": {
+    "lib": ["DOM"],
+    "esModuleInterop": true, 
+    "module": "es6",
+    "target": "es5",
+    "moduleResolution": "node"
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalSpecifierResolution": "node",
+  }
+}
