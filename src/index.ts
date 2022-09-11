@@ -3,8 +3,8 @@
 */
 import fs from "fs";
 import path from 'path';
-import { FileOperation, Process, OldFile, OperationType, AllocationType } from "./typings";
-import { findObjectValueGte, sumObjectValues } from "./utils";
+import { createFile, deleteFile } from "./operations";
+import { FileOperation, Process, OldFile, OperationType, AllocationType, DiskFile } from "./typings";
 
 async function main() {
   try {
@@ -31,69 +31,65 @@ async function main() {
   }
 }
 
-function runOperations(disk: string[], processes: Process[], allocationType: number, operations: FileOperation[]) {
+function runOperations(disk: DiskFile[], processes: Process[], allocationType: number, operations: FileOperation[]) {
 
   operations.forEach( (operation, i) => {
     try {
+      // Busca processo que realizará operação
+      const processIndex = processes.findIndex( p => p.id === operation.process_id)
+      // Verifica se o processo existe na lista de processos
+      if(processIndex === -1) 
+        throw new Error(`O processo ${operation.process_id} não existe.`);
+      // Verifica se o processo ainda pode executar operações
+      if(processes[processIndex].process_time <= 0) 
+        throw new Error(`O processo ${operation.process_id} já encerrou a sua execução.`);
+      
+      // Processo executará operação (-1 tempo de processamento)
+      processes[processIndex].process_time = processes[processIndex].process_time - 1;
+      
       if(operation.type === OperationType.DELETE) {
         // Operação de deleção de arquivo
+        disk = deleteFile(disk, processes[processIndex], operation)
+        printOperationResult(i, true, `Arquivo ${operation.name} deletado pelo processo ${operation.process_id}`)
       } else if (operation.type === OperationType.CREATE) {
         // Operação de criação de arquivo
-        if(allocationType === AllocationType.CONTIGUA) {
-          // Verifica se tem espaço disponivel
-          const availableIndex = findObjectValueGte( freeDiskSpaces(disk), operation.size )
-          if(availableIndex === undefined) throw new Error("Falta de espaço em disco");
-        } else {
-          // Verifica se tem espaço disponivel
-          if( operation.size > sumObjectValues( freeDiskSpaces(disk) ) ) throw new Error("Falta de espaço em disco");
-        }
+        disk = createFile(disk, allocationType, processes[processIndex], operation)
+        printOperationResult(i, true, `Arquivo ${operation.name} criado pelo processo ${operation.process_id}`)
       } else {
         throw new Error("Tipo de operação desconhecida");
       }
     } catch (error) {
       printOperationResult(i, false, error)
     }
+    printDisk(disk)
+    console.log(".")
   })
 
-}
-
-function freeDiskSpaces(disk: string[]) {
-  const result = {};
-  let initialIndex = undefined;
-  for (let index = 0; index < disk.length; index++) {
-    const value = disk[index];
-    if(value === "0") {
-      if(initialIndex !== undefined) {
-        result[initialIndex] += 1;
-      } else {
-        result[index] = 1;
-        if(disk[index + 1] === "0") {
-          initialIndex = index
-        }
-      }
-    }
-  }
-  console.log(result)
-  return result
 }
 
 // Mostra resultados das operações no console
-function printOperationResult(index: number, success: boolean, cause = "") {
-  console.log(`Operação ${index} - ${success ? "Sucesso" : "Falha"} \n${cause}\n`)
+function printOperationResult(index: number, success: boolean, desc = "") {
+  console.log(`Operação ${index+1} - ${success ? "✅ Sucesso" : "❌ Falha"} \n${desc}`)
+}
+
+function printDisk(disk: DiskFile[]) {
+  const str = disk.map( f => f.name ).toString()
+  console.log(str)
 }
 
 function initDisk(diskSize: number, initialFiles: OldFile[]) {
-  const disk = new Array<string>(diskSize).fill('0')
+  const disk = new Array<DiskFile>(diskSize).fill({name:'0'})
   console.log("diskSize = " + diskSize)
   // Arquivos iniciais são alocados de forma contigua
   initialFiles.forEach( file => {
-    const free_index = disk.findIndex( v => v === '0')
+    const free_index = disk.findIndex( v => v.name === '0')
     if(free_index === -1 || (free_index+file.size) > diskSize) throw new Error("No space for initial allocation");
-    disk.fill(file.name, file.position, file.position+file.size)
+    disk.fill({ name: file.name, allocationType: AllocationType.CONTIGUA }, file.position, file.position+file.size)
   })
 
   console.log("Initial disk state: ")
-  console.log(disk)
+  printDisk(disk)
+  console.log("\n")
   return disk
 }
 
@@ -115,7 +111,7 @@ function readProcesses(filename: string) {
 function readFiles(filename: string) {
   const contentArr = txtInputFileToArray(filename)
 
-  const allocationType = Number(contentArr[0]) // Tipo de alocação
+  const allocationType: AllocationType = Number(contentArr[0]) // Tipo de alocação
   const diskSize = Number(contentArr[1])  // Tamanho do disco (qtd de blocos)
   const oldFilesQty = Number(contentArr[2])  // Numero de arquivos ja alocados em disco
 

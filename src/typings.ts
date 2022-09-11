@@ -32,3 +32,11 @@ export enum AllocationType {
   ENCADEADA = 2,
   INDEXADA = 3
 }
+
+export type DiskFile = {
+  name: string,
+  allocationType?: AllocationType,
+  created_by?: number,
+  nextBlock?: number // Usado apenas no caso de alocação encadeada
+  blocksList?: number[] // Usado apenas no caso de aloacação indexada no bloco de índice.
+}
