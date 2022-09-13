@@ -1,4 +1,4 @@
-
+// Dados de um Processo executado
 export type Process = {
   id: number,
   priority: number,
@@ -6,6 +6,7 @@ export type Process = {
   operations: number
 }
 
+/// Tipos de operacao de disco
 export enum OperationType {
   CREATE = 0,
   DELETE = 1
@@ -26,6 +27,7 @@ export type OldFile = {
   size: number
 }
 
+// Tipo de alocacao na memoria
 // 1-contígua, 2-encadeada ou 3-indexada
 export enum AllocationType {
   CONTIGUA = 1,
@@ -33,6 +35,7 @@ export enum AllocationType {
   INDEXADA = 3
 }
 
+// Bloco de arquivo salvo no disco
 export type DiskFile = {
   name: string,
   allocationType?: AllocationType,

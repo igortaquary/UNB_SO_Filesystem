@@ -5,6 +5,7 @@ import { findObjectValueGte, sumObjectValues } from "./utils";
 export function createFile(disk: DiskFile[], allocationType: AllocationType, process: Process, operation: FileOperation) {
   // Obtem os espaços livres no disco
   const freeDiskSpaces = getFreeDiskSpaces(disk)
+  // Verifica qual o tipo de alocacao do arquivo
   switch (allocationType) {
     case AllocationType.CONTIGUA:
       // Verifica se tem espaço continuo disponivel
@@ -33,6 +34,7 @@ export function createFile(disk: DiskFile[], allocationType: AllocationType, pro
   }
 }
 
+// Cria arquivo de alocacao contigua
 function contiguousCreate(disk: DiskFile[], operation: FileOperation, firstIndex: string) {
   for (let index = Number(firstIndex); index < (Number(firstIndex) + operation.size); index++) {
     disk[index] = {
@@ -44,13 +46,17 @@ function contiguousCreate(disk: DiskFile[], operation: FileOperation, firstIndex
   return disk
 }
 
+// Cria arquivo de alocacao encadeada
 function chainedCreate(disk: DiskFile[], operation: FileOperation) {
   // Tamanho final do arquivo (somado com os 10%)
   const total_size = operation.size + Math.ceil(operation.size / 10);
   for (let block = 0; block < total_size; block++) {
     const freeIndex = disk.findIndex( b => b.name === "0");
-    const nextFreeIndex = block >= total_size - 1 ? 
+    const nextFreeIndex = block >= total_size ? 
       undefined : disk.findIndex( (b,i) => (b.name === "0" && i > freeIndex ))
+    
+    if(nextFreeIndex === -1)
+      throw new Error("Falta de espaço em disco");
     
     disk[freeIndex] = {
       name: operation.name,
@@ -62,6 +68,7 @@ function chainedCreate(disk: DiskFile[], operation: FileOperation) {
   return disk
 }
 
+// Cria arquivo de alocacao indexada
 function indexedCreate(disk: DiskFile[], operation: FileOperation) {
   // Busca primeiro bloco livre
   const firstBlockIndex = disk.findIndex( b => b.name === "0");
@@ -90,6 +97,7 @@ function indexedCreate(disk: DiskFile[], operation: FileOperation) {
   return disk
 }
 
+// Busco os bocos livres e quantos blocos seguintes tambem estao livres
 function getFreeDiskSpaces(disk: DiskFile[]) {
   const result = {};
   let initialIndex = undefined;
@@ -114,7 +122,7 @@ function getFreeDiskSpaces(disk: DiskFile[]) {
 export function deleteFile(disk: DiskFile[], process: Process, operation: FileOperation) {
   
   const fileFirstIndex = disk.findIndex( file => file.name[0] === operation.name )
-  if(fileFirstIndex === -1) throw new Error(`O arquivo ${operation.name} não foi encontrado para deleção`);
+  if(fileFirstIndex === -1) throw new Error("O arquivo não foi encontrado para deleção");
   const fileFirstBlock = disk[fileFirstIndex]
 
   // Verifica permissão para deletar arquivo
@@ -137,6 +145,7 @@ export function deleteFile(disk: DiskFile[], process: Process, operation: FileOp
   }
 }
 
+// Faz a delecao contigua
 function contiguousDelete(disk: DiskFile[], firstIndex: number, filename: string) {
   for (let i = firstIndex; disk[i].name === filename; i++) {
     disk[i] = { name: "0" }
@@ -144,6 +153,7 @@ function contiguousDelete(disk: DiskFile[], firstIndex: number, filename: string
   return disk
 }
 
+// Faz a delecao encadeada
 function chainedDelete(disk: DiskFile[], firstIndex: number) {
   let i = firstIndex
   while (i !== undefined) {
@@ -154,6 +164,7 @@ function chainedDelete(disk: DiskFile[], firstIndex: number) {
   return disk
 }
 
+// Faz a delecao indexada
 function indexedDelete(disk: DiskFile[], firstIndex: number) {
   const index_block = disk[firstIndex]
   if(index_block.name.charAt(1) !== "I")
