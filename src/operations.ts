@@ -36,6 +36,7 @@ export function createFile(disk: DiskFile[], allocationType: AllocationType, pro
   }
 }
 
+// Realiza a criação de arquivo com alocação contigua e retorna o novo estado do disco
 function contiguousCreate(disk: DiskFile[], operation: FileOperation, firstIndex: string) {
   for (let index = Number(firstIndex); index < (Number(firstIndex) + operation.size); index++) {
     disk[index] = {
@@ -47,6 +48,7 @@ function contiguousCreate(disk: DiskFile[], operation: FileOperation, firstIndex
   return disk
 }
 
+// Realiza a criação de arquivo com alocação encadeada e retorna o novo estado do disco
 function chainedCreate(disk: DiskFile[], operation: FileOperation, total_size: number) {
   for (let block = 0; block < total_size; block++) {
     const freeIndex = disk.findIndex( b => b.name === "0");
@@ -63,6 +65,7 @@ function chainedCreate(disk: DiskFile[], operation: FileOperation, total_size: n
   return disk
 }
 
+// Realiza a criação de arquivo com alocação indexada e retorna o novo estado do disco
 function indexedCreate(disk: DiskFile[], operation: FileOperation) {
   // Busca primeiro bloco livre
   const firstBlockIndex = disk.findIndex( b => b.name === "0");
@@ -91,6 +94,9 @@ function indexedCreate(disk: DiskFile[], operation: FileOperation) {
   return disk
 }
 
+// Função que busca os espaços livres do disco e 
+// retorna um objeto com os indices de disco que estão livres e
+// quantos blocos contiguos livres cada indice possui.
 function getFreeDiskSpaces(disk: DiskFile[]) {
   const result = {};
   let initialIndex = undefined;
@@ -114,6 +120,7 @@ function getFreeDiskSpaces(disk: DiskFile[]) {
 /* OPERAÇÕES DE DELEÇÃO */
 export function deleteFile(disk: DiskFile[], process: Process, operation: FileOperation) {
   
+  // Verifica se o arquivo existe no disco
   const fileFirstIndex = disk.findIndex( file => file.name[0] === operation.name )
   if(fileFirstIndex === -1) throw new Error(`O arquivo ${operation.name} não foi encontrado para deleção`);
   const fileFirstBlock = disk[fileFirstIndex]

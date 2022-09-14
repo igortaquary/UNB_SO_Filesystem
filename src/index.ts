@@ -1,13 +1,21 @@
 /* 
-
+Trabalho de implementação de sistema de arquivos
+Disciplina: Sistemas Operacionais
+Professora: Aletéia Patrícia Favacho
+Alunos:
+- Eduardo Vaz Fagundes Rech - 180075161
+- Gabriel Henrique Souza de Melo - 180136577
+- Igor Laranja Borges Taquary - 180122231
 */
 import fs from "fs";
 import path from 'path';
 import { createFile, deleteFile } from "./operations";
 import { FileOperation, Process, OldFile, OperationType, AllocationType, DiskFile } from "./typings";
 
-async function main() {
+// Função principal
+function main() {
   try {
+    // Nomes dos arquivos carregados como parâmetros
     const processes_file = process.argv[2]
     const files_file = process.argv[3]
   
@@ -18,11 +26,13 @@ async function main() {
     // Carrega os processos no array
     const processes = readProcesses(processes_file) 
 
-    // Carrega as informações do disco e os arquivos em arrays
+    // Carrega as informações do disco e as operações de arquivos em array
     const { allocationType, diskSize, oldFiles, filesToCreate } = readFiles(files_file) 
-  
+    
+    // Cria a estrutura do disco e aloca os arquivos iniciais
     const disk = initDisk(diskSize, oldFiles)
 
+    // Executa as operações de arquivos
     runOperations(disk, processes, allocationType, filesToCreate)
   
     console.log("Success End")
@@ -59,8 +69,10 @@ function runOperations(disk: DiskFile[], processes: Process[], allocationType: n
         throw new Error("Tipo de operação desconhecida");
       }
     } catch (error) {
+      // Mostra o erro em caso de Falha
       printOperationResult(i, false, error)
     }
+    // Mostra o estado atual do disco
     printDisk(disk)
     console.log(".")
   })
@@ -78,6 +90,7 @@ function printDisk(disk: DiskFile[]) {
 }
 
 function initDisk(diskSize: number, initialFiles: OldFile[]) {
+  // Criação do array de disco, inicialmente preenchido com zeros
   const disk = new Array<DiskFile>(diskSize).fill({name:'0'})
   console.log("diskSize = " + diskSize)
   // Arquivos iniciais são alocados de forma contigua
@@ -93,6 +106,8 @@ function initDisk(diskSize: number, initialFiles: OldFile[]) {
   return disk
 }
 
+// Função que recebe um arquivo txt de processos e 
+// retorna um array de objetos "Process"
 function readProcesses(filename: string) {
   const contentArr = txtInputFileToArray(filename)
   const processes: Process[] = contentArr.map( line => {
@@ -106,7 +121,10 @@ function readProcesses(filename: string) {
   })
   return processes;
 }
-
+// Função que recebe um arquivo txt de operações de arquivo e 
+// retorna o tipo de alocação, tamanho do disco,
+// quantidade de arquivos iniciais, arquivos iniciais
+// e um array de objetos "FileOperation"
 function readFiles(filename: string) {
   const contentArr = txtInputFileToArray(filename)
 
@@ -142,11 +160,12 @@ function readFiles(filename: string) {
   return response;
 }
 
+// Busca um arquivo .txt pelo nome e retorna um array com cada linha do arquivo
 function txtInputFileToArray (filename: string) {
   const buffer = fs.readFileSync(path.resolve("./inputs/" + filename));
   const content = buffer.toString()
   return content.split(/\n/)
 }
 
-// Run main
+// Executa a main
 main()
