@@ -14,15 +14,18 @@ export function createFile(disk: DiskFile[], allocationType: AllocationType, pro
       return contiguousCreate(disk, operation, availableIndex);
 
     case AllocationType.ENCADEADA:
+      // Tamanho final do arquivo (somado com os 10%)
+      const total_size = operation.size + Math.ceil(operation.size / 10);
       // Verifica se tem espaço total disponivel
-      if( operation.size > sumObjectValues( freeDiskSpaces ) ) 
+      if( total_size > sumObjectValues( freeDiskSpaces ) ) 
         throw new Error("Falta de espaço em disco");
 
-      return chainedCreate(disk, operation);
+      return chainedCreate(disk, operation, total_size);
 
     case AllocationType.INDEXADA:
       // Verifica se tem espaço disponivel
-      if( operation.size > sumObjectValues( freeDiskSpaces ) )
+      // size + 1 para espaço do bloco de indice
+      if( (operation.size + 1) > sumObjectValues( freeDiskSpaces ) )
         throw new Error("Falta de espaço em disco");
 
       return indexedCreate(disk, operation);
@@ -44,9 +47,7 @@ function contiguousCreate(disk: DiskFile[], operation: FileOperation, firstIndex
   return disk
 }
 
-function chainedCreate(disk: DiskFile[], operation: FileOperation) {
-  // Tamanho final do arquivo (somado com os 10%)
-  const total_size = operation.size + Math.ceil(operation.size / 10);
+function chainedCreate(disk: DiskFile[], operation: FileOperation, total_size: number) {
   for (let block = 0; block < total_size; block++) {
     const freeIndex = disk.findIndex( b => b.name === "0");
     const nextFreeIndex = block >= total_size - 1 ? 
